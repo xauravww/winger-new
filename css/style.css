@@ -1,0 +1,72 @@
+/* Custom Styles to integrate your brand colors */
+:root {
+    --primary-blue: #0e3d59;
+    --primary-blue-dark: #0a2a3d;
+    --primary-blue-light: #60c5e1;
+    --primary-blue-lighter: #a3d7f0;
+    --secondary-blue: #60c5e1;
+    --secondary-blue-dark: #0e3d59;
+    --secondary-blue-light: #8dd3e8;
+    --accent-dark-blue: #0e3d59;
+    --accent-light: #d7e9eb;
+    --accent-black: #000000;
+}
+
+body {
+    font-family: 'Inter', sans-serif;
+}
+
+/* Extending Tailwind with your brand colors */
+.bg-primary-blue { background-color: var(--primary-blue); }
+.bg-primary-blue-dark { background-color: var(--primary-blue-dark); }
+.bg-primary-blue-light { background-color: var(--primary-blue-light); }
+.hover\:bg-primary-blue-dark:hover { background-color: var(--primary-blue-dark); }
+.text-primary-blue { color: var(--primary-blue); }
+.text-primary-blue-light { color: var(--primary-blue-light); }
+.border-primary-blue-light { border-color: var(--primary-blue-light); }
+
+/* Modern Navbar Styling */
+.header-scrolled {
+    background-color: rgba(14, 61, 89, 0.85); /* primary-blue with opacity */
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px); /* For Safari */
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1);
+}
+
+/* Underline effect for desktop nav links */
+.nav-link {
+    position: relative;
+    padding-bottom: 4px;
+}
+.nav-link::after {
+    content: '';
+    position: absolute;
+    left: 0;
+    bottom: 0;
+    width: 0;
+    height: 2px;
+    background-color: var(--primary-blue-light);
+    transition: width 0.3s ease-in-out;
+}
+.nav-link:hover::after {
+    width: 100%;
+}
+
+/* Mobile Menu Transitions */
+#mobile-menu {
+    transition: transform 0.3s ease-out, opacity 0.3s ease-out;
+}
+#mobile-menu.hidden {
+    transform: translateY(-20px);
+    opacity: 0;
+    pointer-events: none;
+}
+
+/* -- CONTRAST & VISIBILITY FIXES -- */
+.text-shadow {
+    text-shadow: 0px 1px 3px rgba(0, 0, 0, 0.3);
+}
+.text-shadow-strong {
+     text-shadow: 0px 2px 4px rgba(0, 0, 0, 0.5);
+}
+
