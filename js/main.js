@@ -36,9 +36,317 @@ if (mobileMenuButton) {
     });
 }
 
+let allBlogPosts = [];
+const contentArea = document.getElementById('content-area');
 
-// --- Hero Image Slider Logic ---
-// This logic needs to run *after* the content is loaded, so we wrap it in a function.
+// --- DATA FETCHING ---
+async function fetchBlogData() {
+    if (allBlogPosts.length > 0) return;
+    try {
+        const response = await fetch('/blog-data.json');
+        if (!response.ok) throw new Error('Network response was not ok');
+        allBlogPosts = await response.json();
+    } catch (error) {
+        console.error('Failed to fetch blog data:', error);
+    }
+}
+
+// --- PAGE LOADING ---
+async function loadStaticPage(url) {
+    try {
+        const response = await fetch(`/${url}`);
+        if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+        contentArea.innerHTML = await response.text();
+
+        // Initialize components specific to the page
+        if (url === 'home.html') {
+            initializeSlider();
+            initializeCounters();
+        }
+        if (url === 'gallery.html') initializeGallery();
+        if (url === 'work.html') initializeWorkPage();
+        if (url === 'about.html') initializeCounters();
+    } catch (error) {
+        console.error('Failed to load page:', error);
+        contentArea.innerHTML = `<p class="text-center text-red-500 py-20">Failed to load content.</p>`;
+    }
+}
+
+async function loadBlogListPage() {
+    await loadStaticPage('blog.html');
+    const blogGrid = document.getElementById('blog-grid');
+    if (!blogGrid) return;
+
+    blogGrid.innerHTML = allBlogPosts.map(post => `
+        <a href="/blog/${post.slug}" class="block bg-white rounded-xl shadow-lg overflow-hidden transform hover:-translate-y-2 transition-transform duration-300 group">
+            <img class="w-full h-56 object-cover group-hover:scale-105 transition-transform duration-500" src="${post.imageUrl}" alt="${post.title}">
+            <div class="p-6">
+                <p class="text-sm text-gray-500 mb-2">${post.date} &bull; ${post.readTime}</p>
+                <h3 class="font-bold text-xl text-primary-blue-dark mb-3">${post.title}</h3>
+                <p class="text-gray-700 mb-4">${post.summary}</p>
+                <span class="font-bold text-primary-blue-light group-hover:text-primary-blue-dark">Read More &rarr;</span>
+            </div>
+        </a>
+    `).join('');
+}
+
+// --- THIS FUNCTION HAS BEEN CORRECTED ---
+async function loadBlogDetailPage(slug) {
+    // 1. Load the generic blog detail template
+    await loadStaticPage('blog-detail.html');
+
+    // 2. Find the specific post data using the slug from the URL
+    const post = allBlogPosts.find(p => p.slug === slug);
+    const wrapper = document.getElementById('blog-content-wrapper');
+
+    if (post && wrapper) {
+        // 3. Construct the full HTML for the post
+        const postHTML = `
+            <div class="text-center border-b pb-8 mb-8">
+                <p class="text-gray-500">${post.date} &bull; ${post.readTime}</p>
+                <h1 class="text-primary-blue-dark !mt-2">${post.title}</h1>
+            </div>
+            <img src="${post.imageUrl.replace('600x400', '1200x600')}" alt="${post.title}" class="rounded-lg mb-8 w-full">
+            <div>${post.content}</div>
+        `;
+        // 4. Inject the HTML into the template's wrapper
+        wrapper.innerHTML = postHTML;
+    } else if (wrapper) {
+        wrapper.innerHTML = '<h1 class="text-center">Post not found</h1>';
+    }
+}
+
+function loadFooter() {
+    const footerContainer = document.querySelector('footer');
+    if (!footerContainer) return;
+    fetch('/footer.html')
+        .then(response => response.ok ? response.text() : Promise.reject('Failed to load footer'))
+        .then(html => footerContainer.innerHTML = html)
+        .catch(error => console.error(error));
+}
+
+// --- ROUTER & NAVIGATION ---
+async function router() {
+    const path = location.pathname;
+    window.scrollTo(0, 0);
+    const routes = {
+        '/': 'home.html', '/home': 'home.html', '/about': 'about.html',
+        '/work': 'work.html', '/gallery': 'gallery.html', '/free-courses': 'free-courses.html',
+        '/contact': 'contact.html', '/privacy-policy': 'privacy-policy.html',
+        '/terms-of-service': 'terms-of-service.html', '/refund-policy': 'refund-policy.html'
+    };
+    if (routes[path]) await loadStaticPage(routes[path]);
+    else if (path === '/blog') await loadBlogListPage();
+    else if (path.startsWith('/blog/')) await loadBlogDetailPage(path.split('/')[2]);
+    else await loadStaticPage('home.html');
+    closeMobileMenu();
+}
+
+function handleNavigation(event) {
+    const link = event.target.closest('a');
+    if (link && link.target !== '_blank' && link.href.startsWith(location.origin)) {
+        event.preventDefault();
+        const url = new URL(link.href);
+        if (url.pathname !== location.pathname) {
+            history.pushState({}, '', url.pathname);
+            router();
+        }
+    }
+}
+
+// Keep all other helper functions (initializeSlider, initializeCounters, etc.) as they are.
+function closeMobileMenu() { 
+    const mobileMenu = document.getElementById('mobile-menu');
+    if (mobileMenu && !mobileMenu.classList.contains('hidden')) {
+        mobileMenu.classList.add('hidden');
+        document.body.style.overflow = '';
+        const mobileMenuIcon = document.querySelector('#mobile-menu-button svg');
+        if (mobileMenuIcon) {
+            mobileMenuIcon.innerHTML = `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16m-7 6h7"></path>`;
+        }
+    }
+ }
+
+function initializeScrollToTop() {
+    const scrollToTopBtn = document.getElementById('scrollToTopBtn');
+
+    if (!scrollToTopBtn) return;
+
+    // Show or hide button based on scroll position
+    window.addEventListener('scroll', () => {
+        if (window.scrollY > 300) {
+            scrollToTopBtn.classList.remove('opacity-0', 'invisible', 'translate-y-4');
+            scrollToTopBtn.classList.add('opacity-100', 'visible', 'translate-y-0');
+        } else {
+            scrollToTopBtn.classList.add('opacity-0', 'invisible', 'translate-y-4');
+            scrollToTopBtn.classList.remove('opacity-100', 'visible', 'translate-y-0');
+        }
+    });
+
+    // Scroll smoothly to top when button clicked
+    scrollToTopBtn.addEventListener('click', () => {
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    });
+}
+
+function initializeCounters() {
+    const impactSection = document.getElementById('impact-section');
+    if (!impactSection) return;
+
+    const observer = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+            if (entry.isIntersecting) {
+                animateCounters();
+                observer.unobserve(entry.target);
+            }
+        });
+    }, { threshold: 0.5 });
+
+    observer.observe(impactSection);
+}
+
+function animateCounters() {
+    const counters = document.querySelectorAll('.counter');
+    const speed = 100; // Adjusted speed for smoother animation
+
+    counters.forEach(counter => {
+        const updateCount = () => {
+            const target = +counter.getAttribute('data-target');
+            // Remove any non-digit characters before parsing
+            const count = +counter.innerText.replace(/\D/g, '');
+
+            // Calculate increment
+            const inc = Math.ceil(target / speed);
+
+            if (count < target) {
+                counter.innerText = count + inc > target ? target : count + inc;
+                setTimeout(updateCount, 20); // Adjusted delay for smoother animation
+            } else {
+                counter.innerText = target + '+';
+            }
+        };
+
+        updateCount();
+    });
+}
+
+function initializeWorkPage() {
+    const learnMoreButtons = document.querySelectorAll('.learn-more-btn');
+    const modal = document.getElementById('contentModal');
+    if (!modal || !learnMoreButtons.length) return; // Exit if elements aren't on the page
+
+    const modalTitle = document.getElementById('modalTitle');
+    const modalDescription = document.getElementById('modalDescription');
+    const closeButton = document.getElementById('modalCloseBtn');
+    const modalDialog = modal.querySelector('.bg-white');
+
+    const openModal = (title, description) => {
+        modalTitle.textContent = title;
+        modalDescription.innerHTML = description.replace(/\n/g, '<br>'); // Format description
+        modal.classList.remove('invisible', 'opacity-0', 'pointer-events-none');
+        modalDialog.style.transform = 'scale(1)';
+        document.body.style.overflow = 'hidden';
+    };
+
+    const closeModal = () => {
+        modal.classList.add('invisible', 'opacity-0', 'pointer-events-none');
+        modalDialog.style.transform = 'scale(0.95)';
+        document.body.style.overflow = '';
+    };
+
+    learnMoreButtons.forEach(button => {
+        button.addEventListener('click', () => {
+            const card = button.closest('.project-card');
+            const title = card.dataset.title;
+            const description = card.dataset.description;
+            openModal(title, description);
+        });
+    });
+
+    closeButton.addEventListener('click', closeModal);
+    modal.addEventListener('click', (e) => {
+        if (e.target === modal) {
+            closeModal();
+        }
+    });
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && !modal.classList.contains('invisible')) {
+            closeModal();
+        }
+    });
+}
+
+function initializeGallery() {
+    const filters = document.querySelectorAll('#gallery-filters .filter-btn');
+    const galleryItems = document.querySelectorAll('#gallery-grid .gallery-item');
+    const modal = document.getElementById('imageModal');
+    const modalImage = document.getElementById('modalImageContent');
+    const closeButton = document.querySelector('.modal-close');
+
+    if (!filters.length || !galleryItems.length || !modal) {
+        console.warn('Gallery elements not found. Skipping initialization.');
+        return;
+    }
+
+    // --- Filter Logic ---
+    filters.forEach(button => {
+        button.addEventListener('click', () => {
+            // Update active button style
+            filters.forEach(btn => btn.classList.remove('active'));
+            button.classList.add('active');
+
+            const filterValue = button.getAttribute('data-filter');
+
+            // Show/hide gallery items
+            galleryItems.forEach(item => {
+                const itemCategory = item.getAttribute('data-category');
+                if (filterValue === 'all' || filterValue === itemCategory) {
+                    item.style.display = 'block';
+                } else {
+                    item.style.display = 'none';
+                }
+            });
+        });
+    });
+
+    // --- Modal Logic ---
+    const openModal = (imgSrc) => {
+        modalImage.src = imgSrc;
+        modal.classList.remove('invisible', 'opacity-0', 'pointer-events-none');
+        modal.classList.add('visible'); // Custom visible class if needed
+        setTimeout(() => modal.querySelector('img').style.transform = 'scale(1)', 50);
+        document.body.style.overflow = 'hidden';
+    };
+
+    const closeModal = () => {
+        modal.classList.add('invisible', 'opacity-0', 'pointer-events-none');
+        modal.querySelector('img').style.transform = 'scale(0.95)';
+        document.body.style.overflow = '';
+    };
+
+    galleryItems.forEach(item => {
+        item.addEventListener('click', () => {
+            const img = item.querySelector('img');
+            if (img) openModal(img.src);
+        });
+    });
+
+    if(closeButton) closeButton.addEventListener('click', closeModal);
+    modal.addEventListener('click', (e) => {
+        if (e.target === modal) closeModal();
+    });
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && !modal.classList.contains('invisible')) {
+            closeModal();
+        }
+    });
+    
+    // Add a simple 'active' class for styling the filter buttons
+    const style = document.createElement('style');
+    style.innerHTML = `.filter-btn { padding: 0.5rem 1.25rem; border: 2px solid transparent; border-radius: 9999px; background-color: #e2e8f0; color: #4a5568; cursor: pointer; transition: all 0.3s; font-weight: 600; } .filter-btn:hover { background-color: #cbd5e0; } .filter-btn.active { border-color: #0e3d59; background-color: #0e3d59; color: white; }`;
+    document.head.appendChild(style);
+}
+
 function initializeSlider() {
     const sliderTrack = document.getElementById('slider-track');
     if (!sliderTrack) return;
@@ -116,564 +424,12 @@ function initializeSlider() {
     startAutoPlay();
 }
 
-const routes = {
-    '/blog': async () => {
-        const contentArea = document.getElementById('content-area');
-        try {
-            const response = await fetch('blog.html');
-            if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
-            }
-            const html = await response.text();
-            contentArea.innerHTML = html;
-            initializeBlogPage();
-        } catch (error) {
-            console.error('Failed to load blog page:', error);
-            contentArea.innerHTML = '<p class="text-center text-red-500 py-20">Failed to load blog content. Please try again later.</p>';
-        }
-    },
-    '/blog-detail': async (slug) => {
-        const contentArea = document.getElementById('content-area');
-        try {
-            const response = await fetch('blog-detail.html');
-            if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
-            }
-            const html = await response.text();
-            contentArea.innerHTML = html;
-            initializeBlogDetailPage(slug);
-        } catch (error) {
-            console.error('Failed to load blog detail page:', error);
-            contentArea.innerHTML = '<p class="text-center text-red-500 py-20">Failed to load blog post. Please try again later.</p>';
-        }
-    },
-    'default': async (url) => {
-        const contentArea = document.getElementById('content-area');
-        try {
-            const response = await fetch(url);
-            if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
-            }
-            const html = await response.text();
-            contentArea.innerHTML = html;
-
-            // After loading the content, check for and initialize components.
-            initializeSlider();
-            if (url === 'gallery.html') {
-                initializeGallery();
-            }
-            if (url === 'work.html') {
-                initializeWorkPage();
-            }
-            if (url === 'about.html' || url === 'home.html') {
-                checkCounters();
-            }
-        } catch (error) {
-            console.error('Failed to load page:', error);
-            contentArea.innerHTML = '<p class="text-center text-red-500 py-20">Failed to load content. Please try again later.</p>';
-        }
-    }
-};
-
-async function loadPage(url) {
-    // Check if url is a route path or a normal url
-    if (url.startsWith('#/')) {
-        const [path, param] = url.slice(2).split('/');
-        if (routes['/' + path]) {
-            await routes['/' + path](param);
-        } else {
-            await routes['default'](url);
-        }
-    } else {
-        await routes['default'](url);
-    }
-    // Scroll to top after loading page content
-    setTimeout(() => {
-        window.scrollTo({ top: 0, behavior: 'smooth' });
-    }, 100);
-}
-
-function setupNavigation() {
-    const navHome = document.getElementById('nav-home');
-    const navAbout = document.getElementById('nav-about');
-    const navHomeMobile = document.getElementById('nav-home-mobile');
-    const navAboutMobile = document.getElementById('nav-about-mobile');
-
-    if (navHome) {
-        navHome.addEventListener('click', (e) => {
-            e.preventDefault();
-            loadPage('home.html');
-            closeMobileMenu();
-        });
-    }
-
-    if (navAbout) {
-        navAbout.addEventListener('click', (e) => {
-            e.preventDefault();
-            loadPage('about.html');
-            closeMobileMenu();
-        });
-    }
-
-    if (navHomeMobile) {
-        navHomeMobile.addEventListener('click', (e) => {
-            e.preventDefault();
-            loadPage('home.html');
-            closeMobileMenu();
-        });
-    }
-
-    if (navAboutMobile) {
-        navAboutMobile.addEventListener('click', (e) => {
-            e.preventDefault();
-            loadPage('about.html');
-            closeMobileMenu();
-        });
-    }
-
-    const navWork = document.getElementById('nav-work');
-    const navWorkMobile = document.getElementById('nav-work-mobile');
-
-    if (navWork) {
-        navWork.addEventListener('click', (e) => {
-            e.preventDefault();
-            loadPage('work.html');
-            closeMobileMenu();
-        });
-    }
-
-    if (navWorkMobile) {
-        navWorkMobile.addEventListener('click', (e) => {
-            e.preventDefault();
-            loadPage('work.html');
-            closeMobileMenu();
-        });
-    }
-
-    const navGetInvolved = document.getElementById('nav-get-involved');
-    const navGetInvolvedMobile = document.getElementById('nav-get-involved-mobile');
-
-    if (navGetInvolved) {
-        navGetInvolved.addEventListener('click', (e) => {
-            e.preventDefault();
-            loadPage('get-involved.html');
-            closeMobileMenu();
-        });
-    }
-
-    if (navGetInvolvedMobile) {
-        navGetInvolvedMobile.addEventListener('click', (e) => {
-            e.preventDefault();
-            loadPage('get-involved.html');
-            closeMobileMenu();
-        });
-    }
-
-    const navContact = document.getElementById('nav-contact');
-    const navContactMobile = document.getElementById('nav-contact-mobile');
-
-    if (navContact) {
-        navContact.addEventListener('click', (e) => {
-            e.preventDefault();
-            loadPage('contact.html');
-            closeMobileMenu();
-        });
-    }
-
-    if (navContactMobile) {
-        navContactMobile.addEventListener('click', (e) => {
-            e.preventDefault();
-            loadPage('contact.html');
-            closeMobileMenu();
-        });
-    }
-
-    const navPrivacyPolicy = document.getElementById('nav-privacy-policy');
-    const navPrivacyPolicyMobile = document.getElementById('nav-privacy-policy-mobile');
-
-    if (navPrivacyPolicy) {
-        navPrivacyPolicy.addEventListener('click', (e) => {
-            e.preventDefault();
-            loadPage('privacy-policy.html');
-            closeMobileMenu();
-        });
-    }
-
-    if (navPrivacyPolicyMobile) {
-        navPrivacyPolicyMobile.addEventListener('click', (e) => {
-            e.preventDefault();
-            loadPage('privacy-policy.html');
-            closeMobileMenu();
-        });
-    }
-
-    const footerTermsOfService = document.getElementById('footer-terms-of-service');
-    if (footerTermsOfService) {
-        footerTermsOfService.addEventListener('click', (e) => {
-            e.preventDefault();
-            loadPage('terms-of-service.html');
-        });
-    }
-
-    const footerRefundPolicy = document.getElementById('footer-refund-policy');
-    if (footerRefundPolicy) {
-        footerRefundPolicy.addEventListener('click', (e) => {
-            e.preventDefault();
-            loadPage('refund-policy.html');
-        });
-    }
-
-const navGallery = document.getElementById('nav-gallery');
-    const navGalleryMobile = document.getElementById('nav-gallery-mobile'); // Add this if you have a mobile gallery link
-
-    if (navGallery) {
-        navGallery.addEventListener('click', (e) => {
-            e.preventDefault();
-            loadPage('gallery.html');
-            closeMobileMenu();
-        });
-    }
-
-    if (navGalleryMobile) {
-        navGalleryMobile.addEventListener('click', (e) => {
-            e.preventDefault();
-            loadPage('gallery.html');
-            closeMobileMenu();
-        });
-    }
-
-    const navFreeCourses = document.getElementById('nav-free-courses');
-    const navFreeCoursesMobile = document.getElementById('nav-free-courses-mobile');
-
-    if (navFreeCourses) {
-        navFreeCourses.addEventListener('click', (e) => {
-            e.preventDefault();
-            loadPage('free-courses.html');
-            closeMobileMenu();
-        });
-    }
-
-    if (navFreeCoursesMobile) {
-        navFreeCoursesMobile.addEventListener('click', (e) => {
-            e.preventDefault();
-            loadPage('free-courses.html');
-            closeMobileMenu();
-        });
-    }
-
-    const navBlog = document.getElementById('nav-blog');
-    const navBlogMobile = document.getElementById('nav-blog-mobile');
-
-    if (navBlog) {
-        navBlog.addEventListener('click', (e) => {
-            e.preventDefault();
-            window.location.hash = '#/blog';
-            closeMobileMenu();
-        });
-    }
-
-    if (navBlogMobile) {
-        navBlogMobile.addEventListener('click', (e) => {
-            e.preventDefault();
-            window.location.hash = '#/blog';
-            closeMobileMenu();
-        });
-    }
-
-}
-
-function loadFooter() {
-    const footer = document.querySelector('footer');
-    if (!footer) return;
-
-    fetch('footer.html')
-        .then(response => {
-            if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
-            }
-            return response.text();
-        })
-        .then(html => {
-            footer.innerHTML = html;
-        })
-        .catch(error => {
-            console.error('Failed to load footer:', error);
-            footer.innerHTML = '<p class="text-center text-red-500 py-4">Failed to load footer. Please try again later.</p>';
-        });
-}
-
-function closeMobileMenu() {
-    const mobileMenu = document.getElementById('mobile-menu');
-    const mobileMenuButton = document.getElementById('mobile-menu-button');
-    const mobileMenuIcon = mobileMenuButton ? mobileMenuButton.querySelector('svg') : null;
-
-    if (mobileMenu && !mobileMenu.classList.contains('hidden')) {
-        mobileMenu.classList.add('hidden');
-        if (mobileMenuIcon) {
-            mobileMenuIcon.innerHTML = `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16m-7 6h7"></path>`;
-        }
-        document.body.style.overflow = '';
-    }
-}
-
-// --- BLOG FUNCTIONALITY ---
-let blogPosts = [];
-
-async function loadBlogData() {
-    try {
-        const response = await fetch('blog-data.json');
-        if (!response.ok) {
-            throw new Error('Failed to load blog data');
-        }
-        blogPosts = await response.json();
-    } catch (error) {
-        console.error('Error loading blog data:', error);
-    }
-}
-
-function initializeBlogPage() {
-    const blogGrid = document.getElementById('blog-grid');
-    if (!blogGrid) return;
-
-    if (blogPosts.length === 0) {
-        blogGrid.innerHTML = '<p class="text-gray-500 col-span-full text-center">No posts available.</p>';
-        return;
-    }
-
-    blogGrid.innerHTML = blogPosts.map(post => `
-        <div class="bg-white rounded-xl shadow-lg overflow-hidden transform hover:-translate-y-2 transition-transform duration-300 flex flex-col">
-            <img class="w-full h-56 object-cover" src="${post.imageUrl}" alt="${post.title}">
-            <div class="p-8 flex flex-col flex-grow">
-                <div class="text-sm text-gray-500 mb-2">${post.date} • ${post.readTime}</div>
-                <h3 class="font-bold text-2xl text-primary-blue-dark mb-3">${post.title}</h3>
-                <p class="text-gray-700 mb-6 flex-grow">${post.summary}</p>
-                <a href="#/blog-detail/${post.slug}" class="font-bold text-primary-blue-light hover:text-primary-blue-dark self-start">Read More &rarr;</a>
-            </div>
-        </div>
-    `).join('');
-}
-
-function initializeBlogDetailPage(slug) {
-    const blogContentWrapper = document.getElementById('blog-content-wrapper');
-    if (!blogContentWrapper) return;
-
-    const post = blogPosts.find(p => p.slug === slug);
-    if (!post) {
-        blogContentWrapper.innerHTML = '<p class="text-center text-red-500">Post not found.</p>';
-        return;
-    }
-
-    blogContentWrapper.innerHTML = `
-        <div class="mb-8">
-            <img src="${post.imageUrl}" alt="${post.title}" class="w-full h-64 object-cover rounded-lg mb-6">
-            <div class="text-sm text-gray-500 mb-4">${post.date} • ${post.readTime}</div>
-        </div>
-        <h1 class="text-4xl font-bold text-primary-blue-dark mb-6">${post.title}</h1>
-        <div class="prose prose-lg max-w-none">${post.content}</div>
-    `;
-}
-
-// Handle hash changes for routing
-window.addEventListener('hashchange', () => {
-    const hash = window.location.hash;
-    if (hash.startsWith('#/blog')) {
-        loadPage(hash);
-    }
-});
-
-// --- COUNTER ANIMATION ---
-function animateCounters() {
-    const counters = document.querySelectorAll('.counter');
-    const speed = 100; // Adjusted speed for smoother animation
-
-    counters.forEach(counter => {
-        const updateCount = () => {
-            const target = +counter.getAttribute('data-target');
-            // Remove any non-digit characters before parsing
-            const count = +counter.innerText.replace(/\D/g, '');
-
-            // Calculate increment
-            const inc = Math.ceil(target / speed);
-
-            if (count < target) {
-                counter.innerText = count + inc > target ? target : count + inc;
-                setTimeout(updateCount, 20); // Adjusted delay for smoother animation
-            } else {
-                counter.innerText = target + '+';
-            }
-        };
-
-        updateCount();
-    });
-}
-
-function checkCounters() {
-    const impactSection = document.getElementById('impact-section');
-    if (!impactSection) return;
-
-    const observer = new IntersectionObserver((entries) => {
-        entries.forEach(entry => {
-            if (entry.isIntersecting) {
-                animateCounters();
-                observer.unobserve(entry.target);
-            }
-        });
-    }, { threshold: 0.5 });
-
-    observer.observe(impactSection);
-}
-
-function setupScrollToTopButton() {
-    const scrollToTopBtn = document.getElementById('scrollToTopBtn');
-
-    if (!scrollToTopBtn) return;
-
-    // Show or hide button based on scroll position
-    window.addEventListener('scroll', () => {
-        if (window.scrollY > 300) {
-            scrollToTopBtn.classList.remove('opacity-0', 'invisible', 'translate-y-4');
-            scrollToTopBtn.classList.add('opacity-100', 'visible', 'translate-y-0');
-        } else {
-            scrollToTopBtn.classList.add('opacity-0', 'invisible', 'translate-y-4');
-            scrollToTopBtn.classList.remove('opacity-100', 'visible', 'translate-y-0');
-        }
-    });
-
-    // Scroll smoothly to top when button clicked
-    scrollToTopBtn.addEventListener('click', () => {
-        window.scrollTo({ top: 0, behavior: 'smooth' });
-    });
-}
-
-// Load the initial page and footer when the DOM is ready.
+// --- INITIALIZATION ---
 document.addEventListener('DOMContentLoaded', async () => {
-    await loadBlogData();
-    loadPage('home.html');
+    await fetchBlogData();
     loadFooter();
-    setupNavigation();
-    checkCounters(); // Initialize counter animation check
-    setupScrollToTopButton(); // Initialize scroll to top button
+    initializeScrollToTop();
+    document.body.addEventListener('click', handleNavigation);
+    window.addEventListener('popstate', router);
+    router();
 });
-
-
-
-// --- GALLERY PAGE LOGIC ---
-function initializeGallery() {
-    const filters = document.querySelectorAll('#gallery-filters .filter-btn');
-    const galleryItems = document.querySelectorAll('#gallery-grid .gallery-item');
-    const modal = document.getElementById('imageModal');
-    const modalImage = document.getElementById('modalImageContent');
-    const closeButton = document.querySelector('.modal-close');
-
-    if (!filters.length || !galleryItems.length || !modal) {
-        console.warn('Gallery elements not found. Skipping initialization.');
-        return;
-    }
-
-    // --- Filter Logic ---
-    filters.forEach(button => {
-        button.addEventListener('click', () => {
-            // Update active button style
-            filters.forEach(btn => btn.classList.remove('active'));
-            button.classList.add('active');
-
-            const filterValue = button.getAttribute('data-filter');
-
-            // Show/hide gallery items
-            galleryItems.forEach(item => {
-                const itemCategory = item.getAttribute('data-category');
-                if (filterValue === 'all' || filterValue === itemCategory) {
-                    item.style.display = 'block';
-                } else {
-                    item.style.display = 'none';
-                }
-            });
-        });
-    });
-
-    // --- Modal Logic ---
-    const openModal = (imgSrc) => {
-        modalImage.src = imgSrc;
-        modal.classList.remove('invisible', 'opacity-0', 'pointer-events-none');
-        modal.classList.add('visible'); // Custom visible class if needed
-        setTimeout(() => modal.querySelector('img').style.transform = 'scale(1)', 50);
-        document.body.style.overflow = 'hidden';
-    };
-
-    const closeModal = () => {
-        modal.classList.add('invisible', 'opacity-0', 'pointer-events-none');
-        modal.querySelector('img').style.transform = 'scale(0.95)';
-        document.body.style.overflow = '';
-    };
-
-    galleryItems.forEach(item => {
-        item.addEventListener('click', () => {
-            const img = item.querySelector('img');
-            if (img) openModal(img.src);
-        });
-    });
-
-    if(closeButton) closeButton.addEventListener('click', closeModal);
-    modal.addEventListener('click', (e) => {
-        if (e.target === modal) closeModal();
-    });
-    document.addEventListener('keydown', (e) => {
-        if (e.key === 'Escape' && !modal.classList.contains('invisible')) {
-            closeModal();
-        }
-    });
-    
-    // Add a simple 'active' class for styling the filter buttons
-    const style = document.createElement('style');
-    style.innerHTML = `.filter-btn { padding: 0.5rem 1.25rem; border: 2px solid transparent; border-radius: 9999px; background-color: #e2e8f0; color: #4a5568; cursor: pointer; transition: all 0.3s; font-weight: 600; } .filter-btn:hover { background-color: #cbd5e0; } .filter-btn.active { border-color: #0e3d59; background-color: #0e3d59; color: white; }`;
-    document.head.appendChild(style);
-}
-
-// --- WORK PAGE MODAL LOGIC ---
-function initializeWorkPage() {
-    const learnMoreButtons = document.querySelectorAll('.learn-more-btn');
-    const modal = document.getElementById('contentModal');
-    if (!modal || !learnMoreButtons.length) return; // Exit if elements aren't on the page
-
-    const modalTitle = document.getElementById('modalTitle');
-    const modalDescription = document.getElementById('modalDescription');
-    const closeButton = document.getElementById('modalCloseBtn');
-    const modalDialog = modal.querySelector('.bg-white');
-
-    const openModal = (title, description) => {
-        modalTitle.textContent = title;
-        modalDescription.innerHTML = description.replace(/\n/g, '<br>'); // Format description
-        modal.classList.remove('invisible', 'opacity-0', 'pointer-events-none');
-        modalDialog.style.transform = 'scale(1)';
-        document.body.style.overflow = 'hidden';
-    };
-
-    const closeModal = () => {
-        modal.classList.add('invisible', 'opacity-0', 'pointer-events-none');
-        modalDialog.style.transform = 'scale(0.95)';
-        document.body.style.overflow = '';
-    };
-
-    learnMoreButtons.forEach(button => {
-        button.addEventListener('click', () => {
-            const card = button.closest('.project-card');
-            const title = card.dataset.title;
-            const description = card.dataset.description;
-            openModal(title, description);
-        });
-    });
-
-    closeButton.addEventListener('click', closeModal);
-    modal.addEventListener('click', (e) => {
-        if (e.target === modal) {
-            closeModal();
-        }
-    });
-    document.addEventListener('keydown', (e) => {
-        if (e.key === 'Escape' && !modal.classList.contains('invisible')) {
-            closeModal();
-        }
-    });
-
-
-}
