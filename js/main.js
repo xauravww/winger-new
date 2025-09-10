@@ -134,12 +134,21 @@ async function router() {
         '/work': 'work.html', '/gallery': 'gallery.html', '/free-courses': 'free-courses.html',
         '/contact': 'contact.html', '/privacy-policy': 'privacy-policy.html',
         '/terms-of-service': 'terms-of-service.html', '/refund-policy': 'refund-policy.html',
-        '/get-involved': 'get-involved.html'
+        '/get-involved': 'get-involved.html', '/donate': 'donate.html'
     };
     if (routes[path]) await loadStaticPage(routes[path]);
     else if (path === '/blog') await loadBlogListPage();
     else if (path.startsWith('/blog/')) await loadBlogDetailPage(path.split('/')[2]);
     else await loadStaticPage('home.html');
+
+    // Initialize contact form listener if on contact page
+    if (path === '/contact') {
+        const contactForm = document.getElementById('contact-form');
+        if (contactForm) {
+            contactForm.addEventListener('submit', handleContactFormSubmit);
+        }
+    }
+
     closeMobileMenu();
 }
 
@@ -425,7 +434,23 @@ function initializeSlider() {
     startAutoPlay();
 }
 
-// --- INITIALIZATION ---
+function handleContactFormSubmit(event) {
+    event.preventDefault();
+    const form = event.target;
+    const name = encodeURIComponent(form.name.value.trim());
+    const email = encodeURIComponent(form.email.value.trim());
+    const subject = encodeURIComponent(form.subject.value.trim());
+    const message = encodeURIComponent(form.message.value.trim());
+
+    if (!name || !email || !subject || !message) {
+        alert('Please fill in all fields before submitting.');
+        return;
+    }
+
+    const mailto = `mailto:info@wingerfoundation.org?subject=${subject}&body=Name:%20${name}%0AEmail:%20${email}%0A%0A${message}`;
+    window.location.href = mailto;
+}
+
 document.addEventListener('DOMContentLoaded', async () => {
     await fetchBlogData();
     loadFooter();
