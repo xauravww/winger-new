@@ -127,8 +127,14 @@ async function loadPage(url) {
         const html = await response.text();
         contentArea.innerHTML = html;
 
-        // After loading the content, check for and initialize any components like the slider.
+        // After loading the content, check for and initialize components.
         initializeSlider();
+        if (url === 'gallery.html') {
+            initializeGallery();
+        }
+        if (url === 'work.html') {
+            initializeWorkPage();
+        }
 
     } catch (error) {
         console.error('Failed to load page:', error);
@@ -265,6 +271,45 @@ function setupNavigation() {
             loadPage('refund-policy.html');
         });
     }
+
+const navGallery = document.getElementById('nav-gallery');
+    const navGalleryMobile = document.getElementById('nav-gallery-mobile'); // Add this if you have a mobile gallery link
+
+    if (navGallery) {
+        navGallery.addEventListener('click', (e) => {
+            e.preventDefault();
+            loadPage('gallery.html');
+            closeMobileMenu();
+        });
+    }
+
+    if (navGalleryMobile) {
+        navGalleryMobile.addEventListener('click', (e) => {
+            e.preventDefault();
+            loadPage('gallery.html');
+            closeMobileMenu();
+        });
+    }
+
+    const navFreeCourses = document.getElementById('nav-free-courses');
+    const navFreeCoursesMobile = document.getElementById('nav-free-courses-mobile');
+
+    if (navFreeCourses) {
+        navFreeCourses.addEventListener('click', (e) => {
+            e.preventDefault();
+            loadPage('free-courses.html');
+            closeMobileMenu();
+        });
+    }
+
+    if (navFreeCoursesMobile) {
+        navFreeCoursesMobile.addEventListener('click', (e) => {
+            e.preventDefault();
+            loadPage('free-courses.html');
+            closeMobileMenu();
+        });
+    }
+
 }
 
 function loadFooter() {
@@ -308,3 +353,125 @@ document.addEventListener('DOMContentLoaded', () => {
     setupNavigation();
 });
 
+
+
+// --- GALLERY PAGE LOGIC ---
+function initializeGallery() {
+    const filters = document.querySelectorAll('#gallery-filters .filter-btn');
+    const galleryItems = document.querySelectorAll('#gallery-grid .gallery-item');
+    const modal = document.getElementById('imageModal');
+    const modalImage = document.getElementById('modalImageContent');
+    const closeButton = document.querySelector('.modal-close');
+
+    if (!filters.length || !galleryItems.length || !modal) {
+        console.warn('Gallery elements not found. Skipping initialization.');
+        return;
+    }
+
+    // --- Filter Logic ---
+    filters.forEach(button => {
+        button.addEventListener('click', () => {
+            // Update active button style
+            filters.forEach(btn => btn.classList.remove('active'));
+            button.classList.add('active');
+
+            const filterValue = button.getAttribute('data-filter');
+
+            // Show/hide gallery items
+            galleryItems.forEach(item => {
+                const itemCategory = item.getAttribute('data-category');
+                if (filterValue === 'all' || filterValue === itemCategory) {
+                    item.style.display = 'block';
+                } else {
+                    item.style.display = 'none';
+                }
+            });
+        });
+    });
+
+    // --- Modal Logic ---
+    const openModal = (imgSrc) => {
+        modalImage.src = imgSrc;
+        modal.classList.remove('invisible', 'opacity-0', 'pointer-events-none');
+        modal.classList.add('visible'); // Custom visible class if needed
+        setTimeout(() => modal.querySelector('img').style.transform = 'scale(1)', 50);
+        document.body.style.overflow = 'hidden';
+    };
+
+    const closeModal = () => {
+        modal.classList.add('invisible', 'opacity-0', 'pointer-events-none');
+        modal.querySelector('img').style.transform = 'scale(0.95)';
+        document.body.style.overflow = '';
+    };
+
+    galleryItems.forEach(item => {
+        item.addEventListener('click', () => {
+            const img = item.querySelector('img');
+            if (img) openModal(img.src);
+        });
+    });
+
+    if(closeButton) closeButton.addEventListener('click', closeModal);
+    modal.addEventListener('click', (e) => {
+        if (e.target === modal) closeModal();
+    });
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && !modal.classList.contains('invisible')) {
+            closeModal();
+        }
+    });
+    
+    // Add a simple 'active' class for styling the filter buttons
+    const style = document.createElement('style');
+    style.innerHTML = `.filter-btn { padding: 0.5rem 1.25rem; border: 2px solid transparent; border-radius: 9999px; background-color: #e2e8f0; color: #4a5568; cursor: pointer; transition: all 0.3s; font-weight: 600; } .filter-btn:hover { background-color: #cbd5e0; } .filter-btn.active { border-color: #0e3d59; background-color: #0e3d59; color: white; }`;
+    document.head.appendChild(style);
+}
+
+// --- WORK PAGE MODAL LOGIC ---
+function initializeWorkPage() {
+    const learnMoreButtons = document.querySelectorAll('.learn-more-btn');
+    const modal = document.getElementById('contentModal');
+    if (!modal || !learnMoreButtons.length) return; // Exit if elements aren't on the page
+
+    const modalTitle = document.getElementById('modalTitle');
+    const modalDescription = document.getElementById('modalDescription');
+    const closeButton = document.getElementById('modalCloseBtn');
+    const modalDialog = modal.querySelector('.bg-white');
+
+    const openModal = (title, description) => {
+        modalTitle.textContent = title;
+        modalDescription.innerHTML = description.replace(/\n/g, '<br>'); // Format description
+        modal.classList.remove('invisible', 'opacity-0', 'pointer-events-none');
+        modalDialog.style.transform = 'scale(1)';
+        document.body.style.overflow = 'hidden';
+    };
+
+    const closeModal = () => {
+        modal.classList.add('invisible', 'opacity-0', 'pointer-events-none');
+        modalDialog.style.transform = 'scale(0.95)';
+        document.body.style.overflow = '';
+    };
+
+    learnMoreButtons.forEach(button => {
+        button.addEventListener('click', () => {
+            const card = button.closest('.project-card');
+            const title = card.dataset.title;
+            const description = card.dataset.description;
+            openModal(title, description);
+        });
+    });
+
+    closeButton.addEventListener('click', closeModal);
+    modal.addEventListener('click', (e) => {
+        if (e.target === modal) {
+            closeModal();
+        }
+    });
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && !modal.classList.contains('invisible')) {
+            closeModal();
+        }
+    });
+
+
+}
