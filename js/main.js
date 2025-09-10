@@ -187,6 +187,10 @@ async function loadPage(url) {
     } else {
         await routes['default'](url);
     }
+    // Scroll to top after loading page content
+    setTimeout(() => {
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    }, 100);
 }
 
 function setupNavigation() {
@@ -519,6 +523,28 @@ function checkCounters() {
     observer.observe(impactSection);
 }
 
+function setupScrollToTopButton() {
+    const scrollToTopBtn = document.getElementById('scrollToTopBtn');
+
+    if (!scrollToTopBtn) return;
+
+    // Show or hide button based on scroll position
+    window.addEventListener('scroll', () => {
+        if (window.scrollY > 300) {
+            scrollToTopBtn.classList.remove('opacity-0', 'invisible', 'translate-y-4');
+            scrollToTopBtn.classList.add('opacity-100', 'visible', 'translate-y-0');
+        } else {
+            scrollToTopBtn.classList.add('opacity-0', 'invisible', 'translate-y-4');
+            scrollToTopBtn.classList.remove('opacity-100', 'visible', 'translate-y-0');
+        }
+    });
+
+    // Scroll smoothly to top when button clicked
+    scrollToTopBtn.addEventListener('click', () => {
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    });
+}
+
 // Load the initial page and footer when the DOM is ready.
 document.addEventListener('DOMContentLoaded', async () => {
     await loadBlogData();
@@ -526,6 +552,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     loadFooter();
     setupNavigation();
     checkCounters(); // Initialize counter animation check
+    setupScrollToTopButton(); // Initialize scroll to top button
 });
 
 
