@@ -1,3 +1,29 @@
+// Load Tailwind CSS CDN globally
+(function() {
+    if (!document.querySelector('script[src="/js/tailwind.js"]')) {
+        const script = document.createElement('script');
+        script.src = '/js/tailwind.js';
+        script.onload = () => {
+            document.body.style.display = '';
+            // Force reflow
+            void document.body.offsetHeight;
+            // Dispatch resize event to force repaint
+            window.dispatchEvent(new Event('resize'));
+            const loader = document.getElementById('page-loader');
+            if (loader) {
+                loader.style.display = 'none';
+            }
+            // Call router to render content after Tailwind loads
+            if (typeof router === 'function') {
+                router();
+            }
+        };
+    document.head.appendChild(script);
+    } else {
+        document.body.style.display = '';
+    }
+})();
+
 // --- Modern Navigation Bar Logic ---
 // This part remains unchanged as it controls the header, which is static.
 const header = document.getElementById('main-header');
