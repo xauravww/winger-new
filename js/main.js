@@ -116,29 +116,76 @@ function initializeSlider() {
     startAutoPlay();
 }
 
-// --- DYNAMIC PAGE LOADING ---
+const routes = {
+    '/blog': async () => {
+        const contentArea = document.getElementById('content-area');
+        try {
+            const response = await fetch('blog.html');
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            const html = await response.text();
+            contentArea.innerHTML = html;
+            initializeBlogPage();
+        } catch (error) {
+            console.error('Failed to load blog page:', error);
+            contentArea.innerHTML = '<p class="text-center text-red-500 py-20">Failed to load blog content. Please try again later.</p>';
+        }
+    },
+    '/blog-detail': async (slug) => {
+        const contentArea = document.getElementById('content-area');
+        try {
+            const response = await fetch('blog-detail.html');
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            const html = await response.text();
+            contentArea.innerHTML = html;
+            initializeBlogDetailPage(slug);
+        } catch (error) {
+            console.error('Failed to load blog detail page:', error);
+            contentArea.innerHTML = '<p class="text-center text-red-500 py-20">Failed to load blog post. Please try again later.</p>';
+        }
+    },
+    'default': async (url) => {
+        const contentArea = document.getElementById('content-area');
+        try {
+            const response = await fetch(url);
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            const html = await response.text();
+            contentArea.innerHTML = html;
+
+            // After loading the content, check for and initialize components.
+            initializeSlider();
+            if (url === 'gallery.html') {
+                initializeGallery();
+            }
+            if (url === 'work.html') {
+                initializeWorkPage();
+            }
+            if (url === 'about.html' || url === 'home.html') {
+                checkCounters();
+            }
+        } catch (error) {
+            console.error('Failed to load page:', error);
+            contentArea.innerHTML = '<p class="text-center text-red-500 py-20">Failed to load content. Please try again later.</p>';
+        }
+    }
+};
+
 async function loadPage(url) {
-    const contentArea = document.getElementById('content-area');
-    try {
-        const response = await fetch(url);
-        if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
+    // Check if url is a route path or a normal url
+    if (url.startsWith('#/')) {
+        const [path, param] = url.slice(2).split('/');
+        if (routes['/' + path]) {
+            await routes['/' + path](param);
+        } else {
+            await routes['default'](url);
         }
-        const html = await response.text();
-        contentArea.innerHTML = html;
-
-        // After loading the content, check for and initialize components.
-        initializeSlider();
-        if (url === 'gallery.html') {
-            initializeGallery();
-        }
-        if (url === 'work.html') {
-            initializeWorkPage();
-        }
-
-    } catch (error) {
-        console.error('Failed to load page:', error);
-        contentArea.innerHTML = '<p class="text-center text-red-500 py-20">Failed to load content. Please try again later.</p>';
+    } else {
+        await routes['default'](url);
     }
 }
 
@@ -310,6 +357,25 @@ const navGallery = document.getElementById('nav-gallery');
         });
     }
 
+    const navBlog = document.getElementById('nav-blog');
+    const navBlogMobile = document.getElementById('nav-blog-mobile');
+
+    if (navBlog) {
+        navBlog.addEventListener('click', (e) => {
+            e.preventDefault();
+            window.location.hash = '#/blog';
+            closeMobileMenu();
+        });
+    }
+
+    if (navBlogMobile) {
+        navBlogMobile.addEventListener('click', (e) => {
+            e.preventDefault();
+            window.location.hash = '#/blog';
+            closeMobileMenu();
+        });
+    }
+
 }
 
 function loadFooter() {
@@ -346,11 +412,120 @@ function closeMobileMenu() {
     }
 }
 
+// --- BLOG FUNCTIONALITY ---
+let blogPosts = [];
+
+async function loadBlogData() {
+    try {
+        const response = await fetch('blog-data.json');
+        if (!response.ok) {
+            throw new Error('Failed to load blog data');
+        }
+        blogPosts = await response.json();
+    } catch (error) {
+        console.error('Error loading blog data:', error);
+    }
+}
+
+function initializeBlogPage() {
+    const blogGrid = document.getElementById('blog-grid');
+    if (!blogGrid) return;
+
+    if (blogPosts.length === 0) {
+        blogGrid.innerHTML = '<p class="text-gray-500 col-span-full text-center">No posts available.</p>';
+        return;
+    }
+
+    blogGrid.innerHTML = blogPosts.map(post => `
+        <div class="bg-white rounded-xl shadow-lg overflow-hidden transform hover:-translate-y-2 transition-transform duration-300 flex flex-col">
+            <img class="w-full h-56 object-cover" src="${post.imageUrl}" alt="${post.title}">
+            <div class="p-8 flex flex-col flex-grow">
+                <div class="text-sm text-gray-500 mb-2">${post.date} • ${post.readTime}</div>
+                <h3 class="font-bold text-2xl text-primary-blue-dark mb-3">${post.title}</h3>
+                <p class="text-gray-700 mb-6 flex-grow">${post.summary}</p>
+                <a href="#/blog-detail/${post.slug}" class="font-bold text-primary-blue-light hover:text-primary-blue-dark self-start">Read More &rarr;</a>
+            </div>
+        </div>
+    `).join('');
+}
+
+function initializeBlogDetailPage(slug) {
+    const blogContentWrapper = document.getElementById('blog-content-wrapper');
+    if (!blogContentWrapper) return;
+
+    const post = blogPosts.find(p => p.slug === slug);
+    if (!post) {
+        blogContentWrapper.innerHTML = '<p class="text-center text-red-500">Post not found.</p>';
+        return;
+    }
+
+    blogContentWrapper.innerHTML = `
+        <div class="mb-8">
+            <img src="${post.imageUrl}" alt="${post.title}" class="w-full h-64 object-cover rounded-lg mb-6">
+            <div class="text-sm text-gray-500 mb-4">${post.date} • ${post.readTime}</div>
+        </div>
+        <h1 class="text-4xl font-bold text-primary-blue-dark mb-6">${post.title}</h1>
+        <div class="prose prose-lg max-w-none">${post.content}</div>
+    `;
+}
+
+// Handle hash changes for routing
+window.addEventListener('hashchange', () => {
+    const hash = window.location.hash;
+    if (hash.startsWith('#/blog')) {
+        loadPage(hash);
+    }
+});
+
+// --- COUNTER ANIMATION ---
+function animateCounters() {
+    const counters = document.querySelectorAll('.counter');
+    const speed = 100; // Adjusted speed for smoother animation
+
+    counters.forEach(counter => {
+        const updateCount = () => {
+            const target = +counter.getAttribute('data-target');
+            // Remove any non-digit characters before parsing
+            const count = +counter.innerText.replace(/\D/g, '');
+
+            // Calculate increment
+            const inc = Math.ceil(target / speed);
+
+            if (count < target) {
+                counter.innerText = count + inc > target ? target : count + inc;
+                setTimeout(updateCount, 20); // Adjusted delay for smoother animation
+            } else {
+                counter.innerText = target + '+';
+            }
+        };
+
+        updateCount();
+    });
+}
+
+function checkCounters() {
+    const impactSection = document.getElementById('impact-section');
+    if (!impactSection) return;
+
+    const observer = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+            if (entry.isIntersecting) {
+                animateCounters();
+                observer.unobserve(entry.target);
+            }
+        });
+    }, { threshold: 0.5 });
+
+    observer.observe(impactSection);
+}
+
 // Load the initial page and footer when the DOM is ready.
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
+    await loadBlogData();
     loadPage('home.html');
     loadFooter();
     setupNavigation();
+    checkCounters(); // Initialize counter animation check
 });
 
 
