@@ -133,7 +133,8 @@ async function router() {
         '/': 'home.html', '/home': 'home.html', '/about': 'about.html',
         '/work': 'work.html', '/gallery': 'gallery.html', '/free-courses': 'free-courses.html',
         '/contact': 'contact.html', '/privacy-policy': 'privacy-policy.html',
-        '/terms-of-service': 'terms-of-service.html', '/refund-policy': 'refund-policy.html'
+        '/terms-of-service': 'terms-of-service.html', '/refund-policy': 'refund-policy.html',
+        '/get-involved': 'get-involved.html'
     };
     if (routes[path]) await loadStaticPage(routes[path]);
     else if (path === '/blog') await loadBlogListPage();
