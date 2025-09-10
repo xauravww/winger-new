@@ -70,3 +70,13 @@ body {
      text-shadow: 0px 2px 4px rgba(0, 0, 0, 0.5);
 }
 
+/* Added padding-top to content area to avoid overlap with fixed header */
+#content-area {
+  padding-top: 5rem; /* default padding for large screens */
+}
+
+@media (max-width: 640px) {
+  #content-area {
+    padding-top: 7rem; /* increased padding for small screens */
+  }
+}

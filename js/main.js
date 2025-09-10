@@ -106,7 +106,7 @@ async function loadBlogDetailPage(slug) {
                 <p class="text-gray-500">${post.date} &bull; ${post.readTime}</p>
                 <h1 class="text-primary-blue-dark !mt-2">${post.title}</h1>
             </div>
-            <img src="${post.imageUrl.replace('600x400', '1200x600')}" alt="${post.title}" class="rounded-lg mb-8 w-full">
+<img src="/${post.imageUrl.replace('600x400', '1200x600')}" alt="${post.title}" class="rounded-lg mb-8 w-full">
             <div>${post.content}</div>
         `;
         // 4. Inject the HTML into the template's wrapper
