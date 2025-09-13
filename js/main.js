@@ -473,7 +473,7 @@ function handleContactFormSubmit(event) {
         return;
     }
 
-    const mailto = `mailto:info@wingerfoundation.org?subject=${subject}&body=Name:%20${name}%0AEmail:%20${email}%0A%0A${message}`;
+    const mailto = `mailto:contact@wingerfoundation.org?subject=${subject}&body=Name:%20${name}%0AEmail:%20${email}%0A%0A${message}`;
     window.location.href = mailto;
 }
 
